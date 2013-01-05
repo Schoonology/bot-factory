@@ -2,7 +2,7 @@
 var cp = require('child_process'),
     path = require('path'),
     optimist = require('optimist'),
-    Bot = require('../lib/bot-factory').Bot,
+    Factory = require('../lib').Factory,
     argv = optimist
       .usage('Spawn a set of bot processes.\nUsage: bot-factory [options] MODE SCRIPT [args]')
       .options({
@@ -11,8 +11,8 @@ var cp = require('child_process'),
           description: 'The number of bots to run simultaneously',
           'default': 1
         },
-        frequency: {
-          alias: ['f', 'freq'],
+        freq: {
+          alias: ['f'],
           description: 'How often to spawn new bots (maximum, in Hz)',
           'default': 1
         },
@@ -36,111 +36,25 @@ var cp = require('child_process'),
       .demand(1)
       .argv,
     script = path.resolve(argv._[0]),
-    bots = {},
-    desired = argv.maximum
+    factory = null
 
 if (argv.help) {
   optimist.showHelp()
   process.exit()
 }
 
-if (argv.module) {
-  try {
-    script = require(script)
-  } catch (e) {
-    argv.module = null
-  }
-}
+factory = new Factory({
+  maximum: argv.maximum,
+  freq: argv.freq,
+  once: argv.once,
+  module: null,
+  script: script,
+  argv: argv._.slice(1)
+})
 
-function spawnBot() {
-  var child = cp.spawn(script, argv._.slice(1), {
-    cwd: process.cwd(),
-    env: process.env,
-    stdio: ['ignore', 'pipe', 'pipe']
-  })
-
-  child.stdout.pipe(process.stdout)
-  child.stderr.pipe(process.stderr)
-
-  bots[child.pid] = child
-
-  child.on('exit', function(code) {
-    if (code !== 0) {
-      console.error('Failed to execute:', script)
-      console.error('Hint: Check the executable flag.')
-      process.exit(code)
-    }
-
-    bots[child.pid] = null
-
-    onBotExit()
-  })
-}
-
-function loadBot() {
-  var child = new script(),
-      fn = null
-
-  if (child instanceof Bot) {
-    fn = child.start
-  } else {
-    fn = script.start
-  }
-
-  if (typeof fn !== 'function') {
-    return
-  }
-
-  if (fn.length > 0) {
-    fn(onBotExit)
-  } else {
-    fn()
-
-    onBotExit()
-  }
-}
-
-function onBotExit() {
-  if (!argv.once) {
-    desired++
-
-    if (desired === 1) {
-      loop()
-    }
-  }
-}
-
-function tick() {
-  if (desired === 0) {
-    return
-  }
-
-  if (argv.module) {
-    loadBot()
-  } else {
-    spawnBot()
-  }
-
-  desired--
-  loop()
-}
-tick()
-
-function loop() {
-  if (argv.frequency > 0) {
-    setTimeout(tick, (1 / argv.frequency) * 1000)
-  } else {
-    process.nextTick(tick)
-  }
-}
+factory.start()
 
 process.on('exit', function () {
-  Object.keys(bots).forEach(function (key) {
-    if (!bots[key]) {
-      return
-    }
-
-    bots[key].kill()
-  })
+  factory.stop()
 })
 process.on('SIGINT', process.exit)
