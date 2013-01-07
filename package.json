@@ -1,0 +1,21 @@
+{
+  "name": "bot-factory",
+  "version": "0.1.0",
+  "description": "A library and script for creating and running bots written in Node.",
+  "main": "index.js",
+  "bin": "bin/bot-factory",
+  "author": "",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": "",
+  "license": "MIT",
+  "dependencies": {
+    "weighted": "~0.1.0",
+    "stepdown": "~0.3.11",
+    "state": "0.0.7",
+    "prostate": "~0.1.0",
+    "optimist": "~0.3.5",
+    "lodash": "~1.0.0-rc.3"
+  }
+}

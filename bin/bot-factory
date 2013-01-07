@@ -47,7 +47,7 @@ factory = new Factory({
   maximum: argv.maximum,
   freq: argv.freq,
   once: argv.once,
-  module: null,
+  module: argv.module,
   script: script,
   argv: argv._.slice(1)
 })
